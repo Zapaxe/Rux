@@ -193,6 +193,8 @@ namespace Rux {
             return "openbsd-x64";
 #elif defined(__NetBSD__) && (defined(__x86_64__) || defined(__amd64__))
             return "netbsd-x64";
+#elif defined(__DragonFly__) && (defined(__x86_64__) || defined(__amd64__))
+            return "dragonfly-x64";
 #elif defined(__illumos__) && (defined(__x86_64__) || defined(__amd64__))
             return "illumos-x64";
 #else
@@ -203,14 +205,15 @@ namespace Rux {
         [[nodiscard]] bool IsSupportedTargetTriple(const std::string_view target) {
             return target == "linux-x64" || target == "windows-x64" || target == "macos-x64" ||
                 target == "macos-arm64" || target == "freebsd-x64" || target == "openbsd-x64" ||
-                target == "netbsd-x64" || target == "illumos-x64";
+                target == "netbsd-x64" || target == "dragonfly-x64" || target == "illumos-x64";
         }
 
         [[nodiscard]] std::string_view TargetOsName(const std::string_view target) {
             if (target.starts_with("linux-")) return "Linux";
             if (target.starts_with("windows-")) return "Windows";
             if (target.starts_with("macos-")) return "macOS";
-            if (target.starts_with("freebsd-") || target.starts_with("openbsd-") || target.starts_with("netbsd-"))
+            if (target.starts_with("freebsd-") || target.starts_with("openbsd-") || target.starts_with("netbsd-")
+                || target.starts_with("dragonfly-"))
                 return "BSD";
             if (target.starts_with("illumos-")) return "Illumos";
             return "";
@@ -912,7 +915,7 @@ namespace Rux {
             }
         }
 
-        Sema sema(std::move(userModules), std::move(depPackages), manifest->package.name);
+        Sema sema(std::move(userModules), std::move(depPackages), manifest->package.name, std::string(TargetOsName(targetName)));
         auto semaResult = sema.Analyze();
 
         for (const auto& diag : semaResult.diagnostics) {
@@ -2258,7 +2261,9 @@ namespace Rux {
             }
             else {
                 std::print(stderr,
-                           "error: unsupported target '{}'; supported targets are linux-x64 and windows-x64\n",
+                           "error: unsupported target '{}'; supported targets are "
+                           "linux-x64, windows-x64, macos-x64, macos-arm64, "
+                           "freebsd-x64, openbsd-x64, netbsd-x64, dragonfly-x64, illumos-x64\n",
                            targetName);
             }
             return 1;
@@ -2574,7 +2579,7 @@ namespace Rux {
                 depPackages[it->second].modules.push_back({loadedModuleNames[i], &depParseResults[i].module});
             }
 
-            Sema sema(std::move(userModules), std::move(depPackages), manifest->package.name);
+            Sema sema(std::move(userModules), std::move(depPackages), manifest->package.name, std::string(TargetOsName(targetName)));
             auto semaResult = sema.Analyze();
 
             for (const auto& diag : semaResult.diagnostics) {

@@ -1923,6 +1923,8 @@ namespace Rux {
             return "macOS";
 #elif defined(__linux__)
             return "Linux";
+#elif defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__NetBSD__) || defined(__DragonFly__)
+            return "BSD";
 #else
             return "";
 #endif
