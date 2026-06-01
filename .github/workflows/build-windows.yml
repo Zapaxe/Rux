@@ -1,21 +1,19 @@
-name: Create Release
+name: Windows
 
 on:
   push:
-    tags:
-      - 'v*'
+    branches: [main, dev]
+    tags: ['v*']  # This now triggers the build on Tags too!
+  pull_request:
+    branches: [main, dev]
 
 jobs:
-  build-and-release:
+  build:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v5
-
-      - name: Install CMake and Ninja
-        uses: lukka/get-cmake@latest
-
-      - name: Set up MSVC
-        uses: ilammy/msvc-dev-cmd@v1
+      - uses: lukka/get-cmake@latest
+      - uses: ilammy/msvc-dev-cmd@v1
 
       - name: Configure
         run: cmake -S . -B build -G Ninja -DCMAKE_CXX_COMPILER=cl -DCMAKE_BUILD_TYPE=Release
@@ -24,6 +22,8 @@ jobs:
         run: cmake --build build
 
       - name: Create GitHub Release
+        # Only run this step if we pushed a tag
+        if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
           files: build/rux.exe
