@@ -50,6 +50,7 @@ add_executable(rux
         Source/Lir.cpp
         Source/Asm.cpp
         Source/Rcu.cpp
+        Source/RcuRiscv.cpp
         Source/Linker.cpp
         Source/Optimizer.cpp
 )

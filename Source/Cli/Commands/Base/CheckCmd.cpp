@@ -488,6 +488,7 @@ int Cli::RunCheck(std::span<std::string_view const> args, GlobalOptions const &o
 
     std::string const hostTarget = HostTargetTriple();
     if (hostTarget != "unknown" && targetName != hostTarget) {
+<<<<<<< HEAD
         if (jsonOutput) {
             EmitFatal("cross-target build from '" + hostTarget + "' to '" + targetName +
                       "' is not supported yet");
@@ -499,6 +500,22 @@ int Cli::RunCheck(std::span<std::string_view const> args, GlobalOptions const &o
                        hostTarget, targetName);
         }
         return 1;
+=======
+        if (targetName.find("riscv64") == std::string::npos) {
+            if (jsonOutput) {
+                EmitFatal("cross-target build from '" + hostTarget + "' to '" +
+                          targetName + "' is not supported yet");
+            }
+            else {
+                std::print(stderr,
+                           "error: cross-target build from '{}' to '{}' is not "
+                           "supported yet\n",
+                           hostTarget,
+                           targetName);
+            }
+            return 1;
+        }
+>>>>>>> 9ce8ed3 (RISC-V Implementation 1)
     }
 
     if (!opts.quiet && !jsonOutput) {

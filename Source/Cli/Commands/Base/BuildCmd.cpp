@@ -162,6 +162,7 @@ int Cli::RunBuild(std::span<std::string_view const> args, GlobalOptions const &o
     }
     std::string const hostTarget = HostTargetTriple();
     if (hostTarget != "unknown" && targetName != hostTarget) {
+<<<<<<< HEAD
         // Target selection is currently used for source/dependency choice.
         // Linking foreign executable formats is kept explicit until the
         // backends support it end-to-end.
@@ -170,6 +171,17 @@ int Cli::RunBuild(std::span<std::string_view const> args, GlobalOptions const &o
                    "supported yet\n",
                    hostTarget, targetName);
         return 1;
+=======
+        // Allow RISC-V cross-compilation from x86-64 for development/testing
+        if (targetName.find("riscv64") == std::string::npos) {
+            std::print(stderr,
+                       "error: cross-target build from '{}' to '{}' is not "
+                       "supported yet\n",
+                       hostTarget,
+                       targetName);
+            return 1;
+        }
+>>>>>>> 9ce8ed3 (RISC-V Implementation 1)
     }
 
     std::string_view profileName = isRelease ? "Release" : "Debug";
@@ -585,7 +597,10 @@ int Cli::RunBuild(std::span<std::string_view const> args, GlobalOptions const &o
         std::print("  Emitting RCU objects for {}\n", manifest->package.name);
     }
 
-    Rcu rcu(lirPackage, std::string(manifest->package.name));
+    const uint8_t rcuArch = (targetName.find("riscv64") != std::string::npos)
+                                ? RcuArch::RISCV64
+                                : RcuArch::X86_64;
+    Rcu rcu(lirPackage, std::string(manifest->package.name), rcuArch);
     auto rcuFiles = rcu.Generate();
 
     if (dumpRcu) {

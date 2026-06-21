@@ -113,8 +113,242 @@ ElapsedSeconds(std::chrono::steady_clock::time_point const start,
     return std::chrono::duration<double>(end - start).count();
 }
 
+<<<<<<< HEAD
 inline std::size_t CountLines(std::string_view source) {
     if (source.empty()) {
+=======
+    inline std::size_t CountLines(std::string_view source) {
+        if (source.empty()) {
+            return 0;
+        }
+
+        std::size_t lines = 0;
+        for (const char ch : source) {
+            if (ch == '\n') {
+                ++lines;
+            }
+        }
+        if (source.back() != '\n') {
+            ++lines;
+        }
+        return lines;
+    }
+
+    inline std::size_t CountTokens(const LexerResult& result) {
+        if (result.tokens.empty()) {
+            return 0;
+        }
+        return result.tokens.back().IsEof() ? result.tokens.size() - 1
+                                            : result.tokens.size();
+    }
+
+    inline std::string FormatNumber(std::uintmax_t value) {
+        std::string digits = std::to_string(value);
+        for (std::ptrdiff_t i = static_cast<std::ptrdiff_t>(digits.size()) - 3;
+             i > 0;
+             i -= 3) {
+            digits.insert(static_cast<std::size_t>(i), 1, ',');
+        }
+        return digits;
+    }
+
+    inline std::string FormatDecimal(double value, int decimals) {
+        std::ostringstream oss;
+        oss << std::fixed << std::setprecision(decimals) << value;
+        std::string text = oss.str();
+        auto dot = text.find('.');
+        if (dot == std::string::npos) {
+            return text;
+        }
+
+        while (!text.empty() && text.back() == '0') {
+            text.pop_back();
+        }
+        if (!text.empty() && text.back() == '.') {
+            text.pop_back();
+        }
+        return text;
+    }
+
+    inline std::string FormatCompactNumber(double value) {
+        const double absValue = std::fabs(value);
+        if (absValue >= 1'000'000.0) {
+            return FormatDecimal(value / 1'000'000.0, 1) + "M";
+        }
+        if (absValue >= 1'000.0) {
+            return FormatDecimal(value / 1'000.0, 1) + "K";
+        }
+        return FormatNumber(static_cast<std::uintmax_t>(std::llround(value)));
+    }
+
+    inline std::string FormatTokenThroughput(double tokensPerSecond) {
+        const double absValue = std::fabs(tokensPerSecond);
+        if (absValue >= 1'000'000.0) {
+            return FormatDecimal(tokensPerSecond / 1'000'000.0, 1) + " M tok/s";
+        }
+        if (absValue >= 1'000.0) {
+            return FormatDecimal(tokensPerSecond / 1'000.0, 1) + " K tok/s";
+        }
+        return FormatNumber(
+                   static_cast<std::uintmax_t>(std::llround(tokensPerSecond))) +
+               " tok/s";
+    }
+
+    inline std::string FormatSize(std::uintmax_t bytes) {
+        const double kb = static_cast<double>(bytes) / 1024.0;
+        if (kb < 1024.0) {
+            return FormatNumber(static_cast<std::uintmax_t>(std::llround(kb))) +
+                   " KB";
+        }
+
+        const double mb = kb / 1024.0;
+        return FormatDecimal(mb, 2) + " MB";
+    }
+
+    inline std::string TargetName() {
+        if constexpr (HostArch == Arch::Unknown) {
+            return std::string{ToString(HostOS)};
+        }
+
+        return std::format("{} {}", ToString(HostOS), ToString(HostArch));
+    }
+
+    inline std::string HostTargetTriple() {
+        auto triple =
+            std::format("{}-{}", ToString(HostOS), ToString(HostArch));
+        std::transform(
+            std::begin(triple),
+            std::end(triple),
+            std::begin(triple),
+            [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+        return triple;
+    }
+
+    inline bool IsSupportedTargetTriple(const std::string_view target) {
+        constexpr std::array supported_targets{"linux-x64",
+                                               "windows-x64",
+                                               "macos-x64",
+                                               "macos-aarch64",
+                                               "freebsd-x64",
+                                               "openbsd-x64",
+                                               "netbsd-x64",
+                                               "dragonfly-x64",
+                                               "illumos-x64",
+                                               "linux-riscv64"};
+
+        return std::ranges::contains(supported_targets, target);
+    }
+
+    inline std::string_view TargetOsName(const std::string_view target) {
+        const auto dash_pos = target.find('-');
+        if (dash_pos == std::string_view::npos) {
+            return "";
+        }
+
+        const auto os_prefix = target.substr(0, dash_pos);
+
+        if (os_prefix == "linux") {
+            return "Linux";
+        }
+        if (os_prefix == "windows") {
+            return "Windows";
+        }
+        if (os_prefix == "macos") {
+            return "macOS";
+        }
+        if (os_prefix == "freebsd" || os_prefix == "openbsd" ||
+            os_prefix == "netbsd" || os_prefix == "dragonfly") {
+            return "BSD";
+        }
+        if (os_prefix == "illumos") {
+            return "Illumos";
+        }
+
+        return "";
+    }
+
+    inline bool DeclMatchesTarget(const Decl& decl,
+                                  const std::string_view target) {
+        if (decl.targetOs.empty()) {
+            return true;
+        }
+        const std::string_view targetOs = TargetOsName(target);
+        // Normalize both sides for robust comparison.
+        if (decl.targetOs.size() != targetOs.size()) {
+            return false;
+        }
+        // Case-insensitive comparison handles any casing in @[Target("...")].
+        for (std::size_t i = 0; i < decl.targetOs.size(); ++i) {
+            if (std::tolower(static_cast<unsigned char>(decl.targetOs[i])) !=
+                std::tolower(static_cast<unsigned char>(targetOs[i]))) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    // Known platform package names.  If a source file imports one of these
+    // and the name does not match the current build target it is a platform-
+    // specific import that should have been pruned; skip it gracefully.
+    inline bool IsPlatformPackageName(const std::string_view name) {
+        return name == "Windows" || name == "Linux" || name == "macOS" ||
+               name == "BSD" || name == "Illumos";
+    }
+
+    inline bool PlatformPackageMatchesTarget(const std::string_view name,
+                                             const std::string_view target) {
+        return name == TargetOsName(target);
+    }
+
+    inline void PruneDeclsForTarget(std::vector<DeclPtr>& decls,
+                                    const std::string_view target);
+
+    inline void PruneDeclForTarget(Decl& decl, const std::string_view target) {
+        if (auto* module = dynamic_cast<ModuleDecl*>(&decl)) {
+            PruneDeclsForTarget(module->items, target);
+        }
+        else if (auto* block = dynamic_cast<ExternBlockDecl*>(&decl)) {
+            PruneDeclsForTarget(block->items, target);
+        }
+    }
+
+    inline void PruneDeclsForTarget(std::vector<DeclPtr>& decls,
+                                    const std::string_view target) {
+        std::erase_if(decls, [&](const DeclPtr& decl) {
+            return !decl || !DeclMatchesTarget(*decl, target);
+        });
+        for (const auto& decl : decls) {
+            PruneDeclForTarget(*decl, target);
+        }
+    }
+
+    inline void PruneModuleForTarget(Module& module,
+                                     const std::string_view target) {
+        PruneDeclsForTarget(module.items, target);
+    }
+
+    inline std::string DependencyPackageName(const Dependency& dep) {
+        return dep.package.empty() ? dep.name : dep.package;
+    }
+
+    inline std::uintmax_t PeakMemoryBytes() noexcept {
+#if RUX_OS_WINDOWS
+        PROCESS_MEMORY_COUNTERS counters{};
+        if (GetProcessMemoryInfo(
+                GetCurrentProcess(), &counters, sizeof(counters))) {
+            return static_cast<std::uintmax_t>(counters.PeakWorkingSetSize);
+        }
+#elif RUX_IS_UNIX
+        rusage usage{};
+        if (getrusage(RUSAGE_SELF, &usage) == 0) {
+            // macOS reports bytes directly; other Unices report in KB.
+            constexpr std::uintmax_t unitMultiplier =
+                (HostOS == OS::MacOS) ? 1ULL : 1024ULL;
+            return static_cast<std::uintmax_t>(usage.ru_maxrss) *
+                   unitMultiplier;
+        }
+#endif
+>>>>>>> 9ce8ed3 (RISC-V Implementation 1)
         return 0;
     }
 

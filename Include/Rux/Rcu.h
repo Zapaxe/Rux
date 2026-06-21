@@ -91,6 +91,7 @@ struct RcuSymbol {
     uint8_t visibility = RcuSymVis::Local;
 };
 
+<<<<<<< HEAD
 struct RcuFile {
     uint8_t arch = 0x01; // x86-64
     uint8_t flags = 0x00;
@@ -111,6 +112,35 @@ struct RcuFile {
 class Rcu {
 public:
     explicit Rcu(LirPackage package, std::string packageName = {});
+=======
+    namespace RcuArch {
+        constexpr uint8_t X86_64 = 0x01;
+        constexpr uint8_t RISCV64 = 0x02;
+    }
+
+    struct RcuFile {
+        uint8_t arch = RcuArch::X86_64;
+        uint8_t flags = 0x00;
+        bool hasMetadata = false;
+        std::string sourcePath;
+        std::string packageName;
+        uint64_t buildTimestamp = 0;
+        uint32_t ruxVersion = 0;
+        uint32_t compilerFlags = 0;
+        std::array<uint8_t, 32> sourceHash = {};
+        std::vector<RcuSection> sections;
+        std::vector<RcuSymbol> symbols;
+    };
+
+    // Public API
+    // Generates RCU binary object files from a LIR package.
+    // One RcuFile is produced per LirModule (one per source file).
+    class Rcu {
+    public:
+        explicit Rcu(LirPackage package,
+                     std::string packageName = {},
+                     uint8_t arch = RcuArch::X86_64);
+>>>>>>> 9ce8ed3 (RISC-V Implementation 1)
 
     // Generate one RcuFile per module in the package.
     [[nodiscard]] std::vector<RcuFile> Generate() const;
@@ -121,8 +151,16 @@ public:
     // Write a human-readable text dump. Returns false on I/O error.
     static bool Dump(RcuFile const &file, std::filesystem::path const &path);
 
+<<<<<<< HEAD
 private:
     LirPackage lir;
     std::string packageName;
 };
+=======
+    private:
+        LirPackage lir;
+        std::string packageName;
+        uint8_t arch_ = RcuArch::X86_64;
+    };
+>>>>>>> 9ce8ed3 (RISC-V Implementation 1)
 } // namespace Rux
